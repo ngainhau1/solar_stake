@@ -37,7 +37,7 @@ The vision of SolarStake is to democratize access to green energy investments gl
 
 ## Live Demo
 - **Network**: Stellar Testnet
-- **Contract ID**: `CDAQZDIIWIRIJ26PK7PRDOGBSDI2RFEEPI5BTFEPR3KYITRR44YOUI7E`
+- **Contract ID**: `CAZ5LVB7HDR4TXR4NBS4ISWDMH44NTYR6PXREJVPXDGXBAHBQZBMIGBK`
 - **Explorer**: https://stellar.expert/explorer/testnet/contract/CDAQZDIIWIRIJ26PK7PRDOGBSDI2RFEEPI5BTFEPR3KYITRR44YOUI7E
 
 ## How to Run
@@ -78,5 +78,5 @@ Community contributions are welcomed from blockchain developers, IoT engineers, 
 This project is licensed under the MIT License.
 
 ### Contract Detail
-ID: CDAQZDIIWIRIJ26PK7PRDOGBSDI2RFEEPI5BTFEPR3KYITRR44YOUI7E
+ID: CAZ5LVB7HDR4TXR4NBS4ISWDMH44NTYR6PXREJVPXDGXBAHBQZBMIGBK
 ![alt text](image.png)

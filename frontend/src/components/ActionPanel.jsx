@@ -23,7 +23,6 @@ export default function ActionPanel({ projectId, refreshData }) {
       setLoading(false);
     }
   };
-
   const handleClaim = async () => {
     setLoading(true);
     setMsg({ text: 'Checking yield...', type: '' });
