@@ -69,7 +69,7 @@ pub struct SolarStakeContract;
 impl SolarStakeContract {
     /// Register a new solar panel project on-chain.
     /// Only the owner can call this. Creates a fractional ownership record.
-    pub fn register_solar(
+    pub fn register(
         env: Env,
         owner: Address,
         project_id: u32,
@@ -113,7 +113,7 @@ impl SolarStakeContract {
 
     /// Buy shares in a solar project.
     /// Investor must sign. Records fractional ownership on-chain.
-    pub fn buy_shares(
+    pub fn buy(
         env: Env,
         investor: Address,
         project_id: u32,
@@ -166,7 +166,7 @@ impl SolarStakeContract {
 
     /// Owner distributes monthly electricity yield to the pool.
     /// Only the project owner can call this.
-    pub fn distribute_yield(
+    pub fn distribute(
         env: Env,
         owner: Address,
         project_id: u32,
@@ -201,7 +201,7 @@ impl SolarStakeContract {
     }
 
     /// Investor claims their proportional share of accumulated yield.
-    pub fn claim_yield(
+    pub fn claim(
         env: Env,
         investor: Address,
         project_id: u32,
@@ -247,7 +247,7 @@ impl SolarStakeContract {
     }
 
     /// Read-only: get project details (anyone can call)
-    pub fn get_project(env: Env, project_id: u32) -> Result<SolarProject, ContractError> {
+    pub fn project(env: Env, project_id: u32) -> Result<SolarProject, ContractError> {
         env.storage()
             .persistent()
             .get(&DataKey::Project(project_id))
@@ -255,7 +255,7 @@ impl SolarStakeContract {
     }
 
     /// Read-only: get investor record (anyone can call)
-    pub fn get_investor(
+    pub fn investor(
         env: Env,
         project_id: u32,
         investor: Address,
@@ -288,32 +288,32 @@ mod test {
         let investor = Address::generate(&env);
 
         // 1. Register a solar project: 50kW, 100 shares, 1_000_000 stroops each
-        client.register_solar(&owner, &1u32, &50u32, &100u32, &1_000_000i128);
+        client.register(&owner, &1u32, &50u32, &100u32, &1_000_000i128);
 
         // 2. Verify project exists
-        let project = client.get_project(&1u32);
+        let project = client.project(&1u32);
         assert_eq!(project.capacity_kw, 50);
         assert_eq!(project.total_shares, 100);
         assert_eq!(project.shares_sold, 0);
 
         // 3. Investor buys 10 shares
-        client.buy_shares(&investor, &1u32, &10u32);
-        let project = client.get_project(&1u32);
+        client.buy(&investor, &1u32, &10u32);
+        let project = client.project(&1u32);
         assert_eq!(project.shares_sold, 10);
 
-        let record = client.get_investor(&1u32, &investor);
+        let record = client.investor(&1u32, &investor);
         assert_eq!(record.shares_owned, 10);
 
         // 4. Owner distributes 500_000 yield
-        client.distribute_yield(&owner, &1u32, &500_000i128);
-        let project = client.get_project(&1u32);
+        client.distribute(&owner, &1u32, &500_000i128);
+        let project = client.project(&1u32);
         assert_eq!(project.total_yield, 500_000);
 
         // 5. Investor claims yield: 500_000 * 10 / 100 = 50_000
-        let claimed = client.claim_yield(&investor, &1u32);
+        let claimed = client.claim(&investor, &1u32);
         assert_eq!(claimed, 50_000);
 
-        let record = client.get_investor(&1u32, &investor);
+        let record = client.investor(&1u32, &investor);
         assert_eq!(record.yield_claimed, 50_000);
     }
 
@@ -328,10 +328,10 @@ mod test {
         let owner = Address::generate(&env);
         let investor = Address::generate(&env);
 
-        client.register_solar(&owner, &1u32, &50u32, &10u32, &1_000_000i128);
+        client.register(&owner, &1u32, &50u32, &10u32, &1_000_000i128);
 
         // Try to buy more shares than available — should fail
-        let result = client.try_buy_shares(&investor, &1u32, &20u32);
+        let result = client.try_buy(&investor, &1u32, &20u32);
         assert!(result.is_err());
     }
 }

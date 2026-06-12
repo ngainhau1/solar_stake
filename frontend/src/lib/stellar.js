@@ -58,7 +58,7 @@ export async function getProjectDetails(projectId) {
       new StellarSdk.Account("GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF", "0"),
       { fee: "100", networkPassphrase: NETWORK_PASSPHRASE }
     )
-      .addOperation(contract.call("get_project", StellarSdk.xdr.ScVal.scvU32(projectId)))
+      .addOperation(contract.call("project", StellarSdk.xdr.ScVal.scvU32(projectId)))
       .setTimeout(30)
       .build();
 
@@ -102,7 +102,7 @@ export async function buyShares(projectId, numShares) {
       fee: StellarSdk.BASE_FEE,
       networkPassphrase: NETWORK_PASSPHRASE,
     })
-      .addOperation(contract.call("buy_shares", ...args))
+      .addOperation(contract.call("buy", ...args))
       .setTimeout(30)
       .build();
 
@@ -160,7 +160,7 @@ export async function claimYield(projectId) {
       fee: StellarSdk.BASE_FEE,
       networkPassphrase: NETWORK_PASSPHRASE,
     })
-      .addOperation(contract.call("claim_yield", ...args))
+      .addOperation(contract.call("claim", ...args))
       .setTimeout(30)
       .build();
 
