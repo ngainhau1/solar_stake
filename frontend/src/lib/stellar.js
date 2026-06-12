@@ -1,5 +1,9 @@
 import * as StellarSdk from '@stellar/stellar-sdk';
-import { isConnected, getAddress, signTransaction } from '@stellar/freighter-api';
+import {
+  isConnected,
+  requestAccess,
+  signTransaction,
+} from '@stellar/freighter-api';
 
 const CONTRACT_ID = "CDAQZDIIWIRIJ26PK7PRDOGBSDI2RFEEPI5BTFEPR3KYITRR44YOUI7E";
 const RPC_URL = "https://soroban-testnet.stellar.org";
@@ -10,21 +14,46 @@ export const stroopsToXlm = (stroops) => {
   return (Number(stroops) / 10000000).toFixed(2);
 };
 
+/**
+ * Connect to Freighter wallet (v6 API).
+ * isConnected() returns { isConnected: bool }, not a raw boolean.
+ * requestAccess() is the recommended way to get the public key.
+ */
 export async function connectWallet() {
-  if (!(await isConnected())) {
-    alert("Please install Freighter wallet extension!");
+  try {
+    const connectionResult = await isConnected();
+
+    if (!connectionResult.isConnected) {
+      alert("Please install Freighter wallet extension!\nhttps://freighter.app");
+      return null;
+    }
+
+    // requestAccess() prompts user to authorize dApp + returns public key
+    const accessResult = await requestAccess();
+
+    if (accessResult.error) {
+      console.error("Freighter access denied:", accessResult.error);
+      alert("Wallet connection was denied. Please approve the request in Freighter.");
+      return null;
+    }
+
+    console.log("Connected:", accessResult.address);
+    return accessResult.address;
+  } catch (err) {
+    console.error("Wallet connection error:", err);
+    alert("Failed to connect wallet. Make sure Freighter is installed and on Testnet.");
     return null;
   }
-  const { address } = await getAddress();
-  return address;
 }
 
+/**
+ * Read project details from the contract (simulation only, no signature needed).
+ */
 export async function getProjectDetails(projectId) {
   try {
     const server = new StellarSdk.SorobanRpc.Server(RPC_URL);
     const contract = new StellarSdk.Contract(CONTRACT_ID);
-    
-    // We construct the xdr args. project_id is u32
+
     const tx = new StellarSdk.TransactionBuilder(
       new StellarSdk.Account("GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF", "0"),
       { fee: "100", networkPassphrase: NETWORK_PASSPHRASE }
@@ -33,20 +62,16 @@ export async function getProjectDetails(projectId) {
       .setTimeout(30)
       .build();
 
-    const prepared = await server.prepareTransaction(tx);
-    const result = await server.simulateTransaction(prepared);
-    
+    const result = await server.simulateTransaction(tx);
+
     if (result.error) {
-       console.error("Simulation error:", result.error);
-       return null;
+      console.error("Simulation error:", result.error);
+      return null;
     }
 
     if (result.result && result.result.retval) {
-       // Since the return type is a struct (SolarProject), it returns as a map or vec depending on the SDK mapping
-       // In newer soroban-sdk, struct fields are stored as a Map or Vec.
-       // For simplicity, we decode it.
-       const decoded = StellarSdk.scValToNative(result.result.retval);
-       return decoded;
+      const decoded = StellarSdk.scValToNative(result.result.retval);
+      return decoded;
     }
     return null;
   } catch (err) {
@@ -55,6 +80,9 @@ export async function getProjectDetails(projectId) {
   }
 }
 
+/**
+ * Buy shares in a solar project. Requires Freighter signature.
+ */
 export async function buyShares(projectId, numShares) {
   const address = await connectWallet();
   if (!address) return;
@@ -65,9 +93,9 @@ export async function buyShares(projectId, numShares) {
     const contract = new StellarSdk.Contract(CONTRACT_ID);
 
     const args = [
-      new StellarSdk.Address(address).toScVal(), // investor
-      StellarSdk.xdr.ScVal.scvU32(projectId),    // project_id
-      StellarSdk.xdr.ScVal.scvU32(numShares)     // num_shares
+      new StellarSdk.Address(address).toScVal(),
+      StellarSdk.xdr.ScVal.scvU32(projectId),
+      StellarSdk.xdr.ScVal.scvU32(numShares),
     ];
 
     const tx = new StellarSdk.TransactionBuilder(account, {
@@ -79,19 +107,41 @@ export async function buyShares(projectId, numShares) {
       .build();
 
     const prepared = await server.prepareTransaction(tx);
-    const { signedTxXdr } = await signTransaction(prepared.toXDR(), {
+
+    const signResult = await signTransaction(prepared.toXDR(), {
       networkPassphrase: NETWORK_PASSPHRASE,
     });
-    
-    const signed = StellarSdk.TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
-    const result = await server.sendTransaction(signed);
-    return result;
+
+    if (signResult.error) {
+      throw new Error(signResult.error);
+    }
+
+    const signed = StellarSdk.TransactionBuilder.fromXDR(
+      signResult.signedTxXdr,
+      NETWORK_PASSPHRASE
+    );
+    const sendResult = await server.sendTransaction(signed);
+
+    // Wait for confirmation
+    if (sendResult.status === "PENDING") {
+      let txResult;
+      do {
+        await new Promise((r) => setTimeout(r, 1000));
+        txResult = await server.getTransaction(sendResult.hash);
+      } while (txResult.status === "NOT_FOUND");
+      return txResult;
+    }
+
+    return sendResult;
   } catch (err) {
     console.error("Transaction failed:", err);
     throw err;
   }
 }
 
+/**
+ * Claim accumulated yield from a solar project.
+ */
 export async function claimYield(projectId) {
   const address = await connectWallet();
   if (!address) return;
@@ -102,8 +152,8 @@ export async function claimYield(projectId) {
     const contract = new StellarSdk.Contract(CONTRACT_ID);
 
     const args = [
-      new StellarSdk.Address(address).toScVal(), // investor
-      StellarSdk.xdr.ScVal.scvU32(projectId),    // project_id
+      new StellarSdk.Address(address).toScVal(),
+      StellarSdk.xdr.ScVal.scvU32(projectId),
     ];
 
     const tx = new StellarSdk.TransactionBuilder(account, {
@@ -115,13 +165,32 @@ export async function claimYield(projectId) {
       .build();
 
     const prepared = await server.prepareTransaction(tx);
-    const { signedTxXdr } = await signTransaction(prepared.toXDR(), {
+
+    const signResult = await signTransaction(prepared.toXDR(), {
       networkPassphrase: NETWORK_PASSPHRASE,
     });
-    
-    const signed = StellarSdk.TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
-    const result = await server.sendTransaction(signed);
-    return result;
+
+    if (signResult.error) {
+      throw new Error(signResult.error);
+    }
+
+    const signed = StellarSdk.TransactionBuilder.fromXDR(
+      signResult.signedTxXdr,
+      NETWORK_PASSPHRASE
+    );
+    const sendResult = await server.sendTransaction(signed);
+
+    // Wait for confirmation
+    if (sendResult.status === "PENDING") {
+      let txResult;
+      do {
+        await new Promise((r) => setTimeout(r, 1000));
+        txResult = await server.getTransaction(sendResult.hash);
+      } while (txResult.status === "NOT_FOUND");
+      return txResult;
+    }
+
+    return sendResult;
   } catch (err) {
     console.error("Claim failed:", err);
     throw err;
