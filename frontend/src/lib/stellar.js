@@ -5,7 +5,7 @@ import {
   signTransaction,
 } from '@stellar/freighter-api';
 
-const CONTRACT_ID = "CDAQZDIIWIRIJ26PK7PRDOGBSDI2RFEEPI5BTFEPR3KYITRR44YOUI7E";
+const CONTRACT_ID = "CAZ5LVB7HDR4TXR4NBS4ISWDMH44NTYR6PXREJVPXDGXBAHBQZBMIGBK";
 const RPC_URL = "https://soroban-testnet.stellar.org";
 const NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
 

@@ -38,7 +38,7 @@ The vision of SolarStake is to democratize access to green energy investments gl
 ## Live Demo
 - **Network**: Stellar Testnet
 - **Contract ID**: `CAZ5LVB7HDR4TXR4NBS4ISWDMH44NTYR6PXREJVPXDGXBAHBQZBMIGBK`
-- **Explorer**: https://stellar.expert/explorer/testnet/contract/CDAQZDIIWIRIJ26PK7PRDOGBSDI2RFEEPI5BTFEPR3KYITRR44YOUI7E
+- **Explorer**: https://stellar.expert/explorer/testnet/contract/CAZ5LVB7HDR4TXR4NBS4ISWDMH44NTYR6PXREJVPXDGXBAHBQZBMIGBK
 
 ## How to Run
 
